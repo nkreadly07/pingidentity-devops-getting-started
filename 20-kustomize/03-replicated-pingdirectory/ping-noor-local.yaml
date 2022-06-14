@@ -22,8 +22,8 @@ metadata:
   name: pingdataconsole
 spec:
   ports:
-  - name: https
-    port: 8443
+    - name: https
+      port: 8443
   selector:
     role: pingdataconsole
 ---
@@ -35,12 +35,12 @@ metadata:
   name: pingdirectory
 spec:
   ports:
-  - name: ldaps
-    port: 1636
-  - name: https
-    port: 1443
-  - name: ldap
-    port: 1389
+    - name: ldaps
+      port: 1636
+    - name: https
+      port: 1443
+    - name: ldap
+      port: 1389
   selector:
     role: pingdirectory
 ---
@@ -55,8 +55,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - name: ldaps
-    port: 1636
+    - name: ldaps
+      port: 1636
   publishNotReadyAddresses: true
   selector:
     role: pingdirectory
@@ -79,17 +79,17 @@ spec:
       name: pingdataconsole
     spec:
       containers:
-      - image: pingidentity/pingdataconsole:edge
-        name: pingdataconsole
-        ports:
-        - containerPort: 8443
-        resources:
-          limits:
-            cpu: "1"
-            memory: 1.5Gi
-          requests:
-            cpu: "1"
-            memory: 1.5Gi
+        - image: pingidentity/pingdataconsole:edge
+          name: pingdataconsole
+          ports:
+            - containerPort: 8443
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1.5Gi
+            requests:
+              cpu: "1"
+              memory: 1.5Gi
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -98,7 +98,7 @@ metadata:
     role: pingdirectory
   name: pingdirectory
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       role: pingdirectory
@@ -110,64 +110,64 @@ spec:
       name: pingdirectory
     spec:
       containers:
-      - envFrom:
-        - configMapRef:
-            name: pingdirectory-environment-variables
-        - secretRef:
-            name: devops-secret
-            optional: true
-        image: pingidentity/pingdirectory:edge
-        lifecycle:
-          preStop:
+        - envFrom:
+            - configMapRef:
+                name: pingdirectory-environment-variables
+            - secretRef:
+                name: devops-secret
+                optional: true
+          image: pingidentity/pingdirectory:edge
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - /preStop.sh
+          livenessProbe:
             exec:
               command:
-              - /bin/sh
-              - -c
-              - /preStop.sh
-        livenessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -c
-            - /opt/liveness.sh
-          failureThreshold: 3
-          initialDelaySeconds: 300
-          periodSeconds: 30
-          timeoutSeconds: 5
-        name: pingdirectory
-        ports:
-        - containerPort: 1636
-        - containerPort: 1443
-        - containerPort: 1389
-        readinessProbe:
-          exec:
-            command:
-            - /bin/sh
-            - -c
-            - /opt/readiness.sh
-          failureThreshold: 3
-          timeoutSeconds: 5
-        resources:
-          limits:
-            cpu: "2"
-            memory: 2Gi
-          requests:
-            cpu: "2"
-            memory: 2Gi
-        volumeMounts:
-        - mountPath: /opt/out
-          name: out-dir
+                - /bin/sh
+                - -c
+                - /opt/liveness.sh
+            failureThreshold: 3
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            timeoutSeconds: 5
+          name: pingdirectory
+          ports:
+            - containerPort: 1636
+            - containerPort: 1443
+            - containerPort: 1389
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /opt/readiness.sh
+            failureThreshold: 3
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+            requests:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /opt/out
+              name: out-dir
       terminationGracePeriodSeconds: 300
       volumes:
-      - name: out-dir
-        persistentVolumeClaim:
-          claimName: out-dir
+        - name: out-dir
+          persistentVolumeClaim:
+            claimName: out-dir
   volumeClaimTemplates:
-  - metadata:
-      name: out-dir
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
+    - metadata:
+        name: out-dir
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
